@@ -2,6 +2,8 @@
 
 `ghcr-cli` is a command-line interface tool that serves as a wrapper around the GitHub CLI (`gh`) for managing Docker images in GitHub Container Registry (ghcr.io). It provides an easy-to-use interface for listing and deleting container images.
 
+## Note
+
 `ghcr-cli` is a wrapper around the GitHub CLI and relies on it for authentication and API calls. Make sure your GitHub CLI is always up to date and properly authenticated with the necessary permissions.
 
 ## Features
