@@ -12,27 +12,17 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          go-version: '1.23'
+          fetch-depth: 0
 
-      - name: Build binaries for multiple architectures
-        run: |
-          # Build for amd64
-          GOOS=linux GOARCH=amd64 go build -o ghcr-cli-linux-amd64
-
-          # Build for arm64
-          GOOS=linux GOARCH=arm64 go build -o ghcr-cli-linux-arm64
-
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          files: |
-            ghcr-cli-linux-amd64
-            ghcr-cli-linux-arm64
-          generate_release_notes: true
+          go-version-file: go.mod
+
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
