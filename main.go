@@ -3,13 +3,12 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 type Package struct {
@@ -38,90 +37,119 @@ type OutputVersion struct {
 }
 
 func main() {
-	var rootCmd = &cobra.Command{Use: "ghcr-cli"}
+	log.SetFlags(0)
 
-	var listCmd = &cobra.Command{
-		Use:   "list [owner/repo]",
-		Short: "List Docker images in GitHub Container Registry",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := checkGHInstalled(); err != nil {
-				log.Fatal(err)
-			}
-
-			owner, repo, err := parseOwnerRepo(args[0])
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			packageName, err := getPackageName(owner, repo)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			versions, err := getPackageVersions(packageName)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			outputVersions := make([]OutputVersion, len(versions))
-			for i, version := range versions {
-				outputVersions[i] = OutputVersion{
-					Package: packageName,
-					Name:    version.Name,
-					ID:      version.ID,
-				}
-			}
-
-			jsonOutput, err := json.MarshalIndent(outputVersions, "", "  ")
-			if err != nil {
-				log.Fatalf("Error creating JSON output: %v", err)
-			}
-
-			fmt.Println(string(jsonOutput))
-		},
-	}
-
-	var deleteCmd = &cobra.Command{
-		Use:   "delete [owner/repo] [version-id]",
-		Short: "Delete a Docker image version from GitHub Container Registry",
-		Args:  cobra.ExactArgs(2),
-		Run: func(cmd *cobra.Command, args []string) {
-			if err := checkGHInstalled(); err != nil {
-				log.Fatal(err)
-			}
-
-			owner, repo, err := parseOwnerRepo(args[0])
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			packageName, err := getPackageName(owner, repo)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			versionID := args[1]
-
-			if !confirmDeletion(packageName, versionID) {
-				fmt.Println("Deletion cancelled.")
-				return
-			}
-
-			if err := deletePackageVersion(packageName, versionID); err != nil {
-				log.Fatal(err)
-			}
-
-			fmt.Printf("Successfully deleted image %s version %s\n", packageName, versionID)
-		},
-	}
-
-	rootCmd.AddCommand(listCmd, deleteCmd)
-
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+	if len(os.Args) < 2 {
+		usage()
 		os.Exit(1)
 	}
+
+	switch os.Args[1] {
+	case "list":
+		runList(os.Args[2:])
+	case "delete":
+		runDelete(os.Args[2:])
+	default:
+		usage()
+		os.Exit(1)
+	}
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, `ghcr-cli manages Docker images in GitHub Container Registry.
+
+Usage:
+  ghcr-cli list [owner/repo]
+  ghcr-cli delete [owner/repo] [version-id]
+`)
+}
+
+func runList(args []string) {
+	fs := flag.NewFlagSet("list", flag.ExitOnError)
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: ghcr-cli list [owner/repo]\n")
+	}
+	fs.Parse(args)
+
+	if fs.NArg() != 1 {
+		fs.Usage()
+		os.Exit(1)
+	}
+
+	if err := checkGHInstalled(); err != nil {
+		log.Fatal(err)
+	}
+
+	owner, repo, err := parseOwnerRepo(fs.Arg(0))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	packageName, err := getPackageName(owner, repo)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	versions, err := getPackageVersions(packageName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	outputVersions := make([]OutputVersion, len(versions))
+	for i, version := range versions {
+		outputVersions[i] = OutputVersion{
+			Package: packageName,
+			Name:    version.Name,
+			ID:      version.ID,
+		}
+	}
+
+	jsonOutput, err := json.MarshalIndent(outputVersions, "", "  ")
+	if err != nil {
+		log.Fatalf("Error creating JSON output: %v", err)
+	}
+
+	fmt.Println(string(jsonOutput))
+}
+
+func runDelete(args []string) {
+	fs := flag.NewFlagSet("delete", flag.ExitOnError)
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: ghcr-cli delete [owner/repo] [version-id]\n")
+	}
+	fs.Parse(args)
+
+	if fs.NArg() != 2 {
+		fs.Usage()
+		os.Exit(1)
+	}
+
+	if err := checkGHInstalled(); err != nil {
+		log.Fatal(err)
+	}
+
+	owner, repo, err := parseOwnerRepo(fs.Arg(0))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	packageName, err := getPackageName(owner, repo)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	versionID := fs.Arg(1)
+
+	if !confirmDeletion(packageName, versionID) {
+		fmt.Println("Deletion cancelled.")
+		return
+	}
+
+	if err := deletePackageVersion(packageName, versionID); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Successfully deleted image %s version %s\n", packageName, versionID)
 }
 
 func getPackageName(owner, repo string) (string, error) {
