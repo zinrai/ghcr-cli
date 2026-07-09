@@ -11,6 +11,12 @@ import (
 	"strings"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 type Package struct {
 	Name       string     `json:"name"`
 	Owner      Owner      `json:"owner"`
@@ -49,6 +55,8 @@ func main() {
 		runList(os.Args[2:])
 	case "delete":
 		runDelete(os.Args[2:])
+	case "version":
+		runVersion()
 	default:
 		usage()
 		os.Exit(1)
@@ -61,7 +69,12 @@ func usage() {
 Usage:
   ghcr-cli list [owner/repo]
   ghcr-cli delete [owner/repo] [version-id]
+  ghcr-cli version
 `)
+}
+
+func runVersion() {
+	fmt.Printf("ghcr-cli %s (commit %s, built %s)\n", version, commit, date)
 }
 
 func runList(args []string) {
