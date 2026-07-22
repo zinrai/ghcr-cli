@@ -21,14 +21,6 @@ gh version 2.46.0 (2024-03-26 Debian 2.46.0-1)
 https://github.com/cli/cli/releases/tag/v2.46.0
 ```
 
-## Installation
-
-Build the project:
-
-```
-$ go build -o ghcr-cli
-```
-
 ## Authentication and Permissions
 
 Before using `ghcr-cli`, you need to authenticate with GitHub and ensure you have the necessary permissions. Follow these steps:
